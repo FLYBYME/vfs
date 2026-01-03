@@ -13,7 +13,8 @@ export class DockerSandbox {
     public async execute(
         vfs: VirtualFileSystem,
         entryPoint: VirtualFile,
-        timeoutMs: number = 10000
+        timeoutMs: number = 10000,
+        env: Record<string, string> = {}
     ): Promise<ContainerLogs> {
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sandbox-exec-'));
 
@@ -23,13 +24,13 @@ export class DockerSandbox {
         }
 
         try {
-            return await this.runContainer(tempDir, ['node', `/sandbox/src/${entryPoint.path}`], timeoutMs);
+            return await this.runContainer(tempDir, ['node', `/sandbox/src/${entryPoint.path}`], timeoutMs, env);
         } finally {
             await fs.rm(tempDir, { recursive: true, force: true });
         }
     }
 
-    private async runContainer(hostPath: string, cmd: string[], timeout: number): Promise<ContainerLogs> {
+    private async runContainer(hostPath: string, cmd: string[], timeout: number, env: Record<string, string>): Promise<ContainerLogs> {
         const container = await this.docker.createContainer({
             Image: DockerSandbox.IMAGE,
             Cmd: cmd,
@@ -37,7 +38,8 @@ export class DockerSandbox {
                 Binds: [`${hostPath}:/sandbox/src:ro`],
                 AutoRemove: true
             },
-            Tty: false
+            Tty: false,
+            Env: Object.entries(env).map(([key, value]) => `${key}=${value}`)
         });
 
         await container.start();
