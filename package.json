@@ -6,6 +6,7 @@
   "scripts": {
     "test": "jest",
     "build": "tsc",
+    "docker:build": "docker build -t agent-sandbox-runner:latest .",
     "prepare": "npm run build"
   },
   "keywords": [],
