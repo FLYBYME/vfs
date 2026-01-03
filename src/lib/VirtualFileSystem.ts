@@ -59,16 +59,19 @@ export class VirtualFileSystem {
      * Reads the contents of a directory in the current Working Directory.
      * Returns a list of file and folder names (not full paths).
      */
-    public readdir(dirPath: string, options?: { recursive?: boolean }): string[] {
+    public readdir(dirPath: string, options?: { recursive?: boolean, ignore?: boolean }): string[] {
         const absDir = this.resolve(dirPath);
         const entries = new Set<string>();
 
+        const gitIgnore = this.loadGitIgnore();
 
         for (const filePath of this.workingFiles.keys()) {
             if (filePath.startsWith(absDir) && filePath !== absDir) {
                 const relPath = path.relative(absDir, filePath);
 
                 if (relPath.startsWith('..') || path.isAbsolute(relPath)) continue;
+
+                if (options?.ignore && gitIgnore?.ignores(relPath)) continue;
 
                 if (options?.recursive) {
                     entries.add(relPath.replace(/\\/g, '/'));
