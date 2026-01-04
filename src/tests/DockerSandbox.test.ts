@@ -81,4 +81,74 @@ describe("DockerSandbox", () => {
             Cmd: ["node", "/sandbox/out/src/main.js"]
         }));
     });
+
+    it("should pass environment variables to container", async () => {
+        await sandbox.execute({
+            vfs,
+            entryPoint: "main.ts",
+            pkgRoot,
+            env: {
+                NODE_ENV: "production",
+                DEBUG: "true"
+            }
+        });
+
+        expect(Dockerode.prototype.createContainer).toHaveBeenCalledWith(expect.objectContaining({
+            Env: expect.arrayContaining(["NODE_ENV=production", "DEBUG=true"])
+        }));
+    });
+
+    it("should execute custom commands", async () => {
+        vfs.write("script.sh", "#!/bin/bash\necho 'test'");
+
+        await sandbox.execute({
+            vfs,
+            entryPoint: "main.ts",
+            pkgRoot,
+            cmd: ["sh", "-c", "ls -la"]
+        });
+
+        expect(Dockerode.prototype.createContainer).toHaveBeenCalledWith(expect.objectContaining({
+            Cmd: ["sh", "-c", "ls -la"]
+        }));
+    });
+
+    it("should handle multiple files in execution", async () => {
+        vfs.write("src/utils.js", "exports.add = (a,b) => a+b;");
+        vfs.write("src/main.js", "const {add} = require('./utils'); console.log(add(1,2));");
+
+        await sandbox.execute({
+            vfs,
+            entryPoint: "src/main.js",
+            pkgRoot
+        });
+
+        expect(fs.writeFile).toHaveBeenCalledWith(expect.stringMatching(/utils\.js$/), expect.any(String));
+        expect(fs.writeFile).toHaveBeenCalledWith(expect.stringMatching(/main\.js$/), expect.any(String));
+    });
+
+    it("should capture stderr output", async () => {
+        mockContainer.modem.demuxStream = jest.fn((stream, stdout, stderr) => {
+            stderr.write(Buffer.from("error message\n"));
+            process.nextTick(() => stream.emit("end"));
+        });
+
+        const result = await sandbox.execute({
+            vfs,
+            entryPoint: "main.ts",
+            pkgRoot
+        });
+
+        expect(result.stderr).toContain("error message");
+    });
+
+    it("should cleanup temporary directory after execution", async () => {
+        await sandbox.execute({
+            vfs,
+            entryPoint: "main.ts",
+            pkgRoot
+        });
+
+        expect(fs.rm).toHaveBeenCalledWith("/tmp/sandbox-run", { recursive: true, force: true });
+    });
 });

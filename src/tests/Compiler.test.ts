@@ -63,4 +63,62 @@ describe("TypeScriptCompiler", () => {
         const compiled = vfs.read("out/main.js")?.content;
         expect(compiled).not.toContain("// comment");
     });
+
+    it("should compile multiple files", () => {
+        vfs.write("src/utils.ts", 'export function add(a: number, b: number) { return a + b; }');
+        vfs.write("src/main.ts", 'import { add } from "./utils"; console.log(add(1, 2));');
+
+        const result = compiler.compileFiles();
+
+        expect(result.success).toBe(true);
+        expect(vfs.read("out/src/utils.js")).toBeDefined();
+        expect(vfs.read("out/src/main.js")).toBeDefined();
+    });
+
+    it("should handle import resolution between VFS files", () => {
+        vfs.write("lib/helper.ts", 'export const message = "Hello";');
+        vfs.write("index.ts", 'import { message } from "./lib/helper"; console.log(message);');
+
+        const result = compiler.compileFiles();
+
+        expect(result.success).toBe(true);
+        const compiled = vfs.read("out/index.js")?.content;
+        expect(compiled).toContain('require("./lib/helper")');
+    });
+
+    it("should generate source maps", () => {
+        vfs.write("main.ts", 'const x: number = 42;');
+
+        const result = compiler.compileFiles();
+
+        expect(result.success).toBe(true);
+        expect(vfs.read("out/main.js.map")).toBeDefined();
+        const sourceMap = vfs.read("out/main.js.map")?.content;
+        expect(sourceMap).toContain('"sources"');
+    });
+
+    it("should support incremental compilation", () => {
+        vfs.write("file1.ts", 'export const a = 1;');
+        const result1 = compiler.compileFiles();
+        expect(result1.success).toBe(true);
+
+        // Add another file
+        vfs.write("file2.ts", 'export const b = 2;');
+        const result2 = compiler.compileFiles();
+
+        expect(result2.success).toBe(true);
+        expect(vfs.read("out/file1.js")).toBeDefined();
+        expect(vfs.read("out/file2.js")).toBeDefined();
+    });
+
+    it("should handle nested directory structures", () => {
+        vfs.write("src/features/auth/login.ts", 'export function login() {}');
+        vfs.write("src/features/auth/logout.ts", 'export function logout() {}');
+
+        const result = compiler.compileFiles();
+
+        expect(result.success).toBe(true);
+        expect(vfs.read("out/src/features/auth/login.js")).toBeDefined();
+        expect(vfs.read("out/src/features/auth/logout.js")).toBeDefined();
+    });
 });

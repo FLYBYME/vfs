@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "test": "jest",
+    "test": "NODE_NO_WARNINGS=1 jest --coverage",
     "build": "tsc",
     "docker:build": "docker build -t agent-sandbox-runner:latest .",
     "prepare": "npm run build"
