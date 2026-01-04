@@ -121,4 +121,49 @@ describe("TypeScriptCompiler", () => {
         expect(vfs.read("out/src/features/auth/login.js")).toBeDefined();
         expect(vfs.read("out/src/features/auth/logout.js")).toBeDefined();
     });
+
+    it("should generate type definitions using generateDefinitions", () => {
+        vfs.write("tool.ts", 'export function myTool(arg: string): number { return arg.length; }');
+
+        const result = compiler.generateDefinitions(["tool.ts"]);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].name).toBe("tool.ts");
+        expect(result[0].dts).toContain("export declare function myTool");
+        expect(result[0].dts).toContain("string");
+        expect(result[0].dts).toContain("number");
+        expect(result[0].js).toContain("myTool");
+    });
+
+    it("should handle invalid tsconfig.json", () => {
+        // Suppress the expected warning for this test
+        const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+        vfs.write("tsconfig.json", "{ invalid json }");
+        vfs.write("main.ts", "const x = 1;");
+
+        // Should fall back to default options and still compile
+        compiler.loadConfigFromVfs();
+        const result = compiler.compileFiles();
+
+        expect(result.success).toBe(true);
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to parse"), expect.anything());
+
+        warnSpy.mockRestore();
+    });
+
+    it("should handle compilation errors gracefully", () => {
+        vfs.write("broken.ts", 'function foo() { return; } foo("wrong");');
+
+        const result = compiler.compileFiles();
+
+        expect(result.success).toBe(false);
+        expect(result.diagnostics.length).toBeGreaterThan(0);
+    });
+
+    it("should access outDir via outputFolder method", () => {
+        const outDir = compiler.outputFolder();
+
+        expect(outDir).toContain("out");
+    });
 });
