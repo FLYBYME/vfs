@@ -8,7 +8,7 @@ import { VirtualFile } from './VirtualFile';
 
 export interface DockerSandboxOptions {
     vfs: VirtualFileSystem;
-    entryPoint: VirtualFile;
+    entryPoint?: VirtualFile;
     timeoutMs?: number;
     env?: Record<string, string>;
     memoryLimit?: number;
@@ -30,8 +30,20 @@ export class DockerSandbox {
             await fs.writeFile(path.join(tempDir, file.path), file.content);
         }
 
+        if (!options.entryPoint && !options.cmd) {
+            throw new Error('No entry point or command specified');
+        }
+
+        const command: string[] = [];
+        if (options.entryPoint) {
+            command.push('node', `/sandbox/src/${options.entryPoint.path}`);
+        }
+        if (options.cmd) {
+            command.push(...options.cmd);
+        }
+
         try {
-            return await this.runContainer(tempDir, options.cmd || ['node', `/sandbox/src/${options.entryPoint.path}`], options);
+            return await this.runContainer(tempDir, command, options);
         } finally {
             await fs.rm(tempDir, { recursive: true, force: true });
         }
