@@ -1,5 +1,9 @@
 
 import { VirtualFileSystem, TypeScriptCompiler } from '../index';
+import path from 'path';
+import os from 'os';
+
+const pkgRoot = path.join(os.tmpdir(), 'sandbox-pkg');
 
 async function main() {
     console.log("Initializing Virtual File System...");
@@ -17,7 +21,7 @@ console.log(greet("World"));
 
     // 2. Setup the compiler
     console.log("Setting up TypeScript Compiler...");
-    const compiler = new TypeScriptCompiler(vfs);
+    const compiler = new TypeScriptCompiler(vfs, pkgRoot);
 
     // Optional: Load config if we had a tsconfig.json
     // compiler.loadConfigFromVfs();

@@ -25,7 +25,7 @@ export class VirtualFileSystem {
     private objectStore: IObjectStore;
     private refs = new Map<string, string>();
     private HEAD: string = "refs/heads/main";
-    private readonly rootDir: string;
+    public readonly rootDir: string;
 
     constructor(rootDir: string = process.cwd(), objectStore?: IObjectStore) {
         this.rootDir = rootDir;

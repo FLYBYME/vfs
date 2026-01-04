@@ -68,7 +68,8 @@ export class DockerSandbox {
         try {
             // A. Dump VFS content to temp execution dir
             for (const file of options.vfs.getAllFiles()) {
-                const targetPath = path.join(tempExecDir, file.path);
+                const relativePath = path.relative(options.vfs.rootDir, file.path);
+                const targetPath = path.join(tempExecDir, relativePath);
                 await fs.mkdir(path.dirname(targetPath), { recursive: true });
                 await fs.writeFile(targetPath, file.content);
             }
@@ -92,17 +93,17 @@ export class DockerSandbox {
                 // Ensure forward slashes for Linux container
                 scriptPath = scriptPath.replace(/\\/g, '/');
 
-                command.push('node', `/sandbox/src/${scriptPath}`);
+                command.push('node', `/sandbox/${scriptPath}`);
             }
 
             // C. Prepare Mounts
             const binds = [
                 // 1. The Code: Read-Write (so the process can write temp files if needed)
-                `${tempExecDir}:/sandbox/src:rw`,
+                `${tempExecDir}:/sandbox:rw`,
 
                 // 2. The Modules: Read-Only (Overlay mount)
                 // This puts the host's cached node_modules into the container's working tree
-                `${path.join(options.pkgRoot, 'node_modules')}:/sandbox/src/node_modules:ro`
+                `${path.join(options.pkgRoot, 'node_modules')}:/sandbox/node_modules:ro`
             ];
 
             return await this.runContainer(command, binds, options);
@@ -117,7 +118,7 @@ export class DockerSandbox {
         const container = await this.docker.createContainer({
             Image: DockerSandbox.IMAGE,
             Cmd: cmd,
-            WorkingDir: '/sandbox/src',
+            WorkingDir: '/sandbox',
             HostConfig: {
                 Binds: binds,
                 AutoRemove: true,

@@ -122,7 +122,7 @@ export class TypeScriptCompiler {
         const emitResult = program.emit(undefined, (fileName, data) => {
             // fileName comes back as absolute path usually, or relative to cwd.
             // We want it relative to the VFS root.
-            const relativePath = path.relative(process.cwd(), fileName);
+            const relativePath = path.relative(this.vfs.rootDir, fileName);
 
             // Normalize slashes for VFS consistency
             const normalizedPath = relativePath.split(path.sep).join('/');
