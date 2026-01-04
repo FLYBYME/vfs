@@ -19,7 +19,7 @@ export interface DockerSandboxOptions {
 export class DockerSandbox {
     private docker = new Dockerode();
     // Use a standard Node image that includes npm
-    private static IMAGE = 'node:18-alpine';
+    private static IMAGE = 'node:25-alpine';
 
     /**
      * 1. INSTALL STAGE
