@@ -537,7 +537,14 @@ export class VirtualFileSystem {
     }
 
     private resolve(filePath: string): string {
-        return path.resolve(this.rootDir, filePath);
+        // 1. If it's already an absolute path under this.rootDir, return it as-is
+        if (path.isAbsolute(filePath) && filePath.startsWith(this.rootDir)) {
+            return filePath;
+        }
+
+        // 2. Otherwise, treat leading slashes as relative to the VFS root
+        const normalizedPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+        return path.resolve(this.rootDir, normalizedPath);
     }
 
     public async getDatabaseDump() {

@@ -27,7 +27,7 @@ async function runExample() {
     }, null, 2));
 
     // B. Add TypeScript Source (Uses the dependency)
-    vfs.write('src/main.ts', `
+    vfs.write('/src/main.ts', `
         import colors from 'colors';
         
         const message: string = "Hello from the Docker Sandbox!";
@@ -76,33 +76,12 @@ async function runExample() {
         return;
     }
 
-    const result = await sandbox.execute({
-        vfs: vfs,
-        cmd: ['ls', '-la'],
-        entryPoint: 'src/main.ts', // Sandbox will auto-map this to out/src/main.js
-        pkgRoot: HOST_CACHE_DIR,   // Mounts node_modules from here
-        env: {
-            NODE_ENV: 'production'
-        }
-    });
-    console.log(result);
-    const result2 = await sandbox.execute({
-        vfs: vfs,
-        cmd: ['pwd'],
-        entryPoint: 'src/main.ts', // Sandbox will auto-map this to out/src/main.js
-        pkgRoot: HOST_CACHE_DIR,   // Mounts node_modules from here
-        env: {
-            NODE_ENV: 'production'
-        }
-    });
-    console.log(result2);
-
     // 6. STEP 3: EXECUTE
     console.log('\n[Step 3] Executing in Sandbox...');
     try {
         const result = await sandbox.execute({
             vfs: vfs,
-            entryPoint: 'src/main.ts', // Sandbox will auto-map this to out/src/main.js
+            entryPoint: '/src/main.ts', // Sandbox will auto-map this to out/src/main.js
             pkgRoot: HOST_CACHE_DIR,   // Mounts node_modules from here
             env: {
                 NODE_ENV: 'production'
