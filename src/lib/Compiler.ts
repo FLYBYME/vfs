@@ -34,11 +34,11 @@ export class TypeScriptCompiler {
             suppressOutputPathCheck: true,
 
             // Critical: Force source structure to match output structure
-            rootDir: '.',
-            outDir: './out',
+            rootDir: this.vfs.rootDir,
+            outDir: path.join(this.vfs.rootDir, 'out'),
 
             // Critical: Point resolution to the external pkgRoot
-            baseUrl: ".",
+            baseUrl: this.vfs.rootDir,
             paths: {
                 "*": [path.join(this.pkgRoot, "node_modules", "*")]
             },
@@ -63,7 +63,7 @@ export class TypeScriptCompiler {
             return;
         }
 
-        const parsed = ts.convertCompilerOptionsFromJson(config.compilerOptions, "./");
+        const parsed = ts.convertCompilerOptionsFromJson(config.compilerOptions, this.vfs.rootDir);
         if (parsed.errors.length > 0) {
             console.warn("Invalid compiler options in tsconfig.json:", parsed.errors.map(d => d.messageText));
         } else {
