@@ -2,6 +2,8 @@ import { VirtualFileSystem } from "../lib/VirtualFileSystem";
 import { TypeScriptCompiler } from "../lib/Compiler";
 import path from "path";
 import os from "os";
+import fs from "fs";
+import ts from "typescript";
 
 describe("TypeScriptCompiler", () => {
     let vfs: VirtualFileSystem;
@@ -165,5 +167,54 @@ describe("TypeScriptCompiler", () => {
         const outDir = compiler.outputFolder();
 
         expect(outDir).toContain("out");
+    });
+
+    it("should resolve modules from the external pkgRoot", () => {
+        // 1. Create a dummy library on the real disk inside pkgRoot
+        const libPath = path.join(pkgRoot, "node_modules", "dummy-lib");
+        const dtsPath = path.join(libPath, "index.d.ts");
+
+        if (!fs.existsSync(libPath)) fs.mkdirSync(libPath, { recursive: true });
+        fs.writeFileSync(dtsPath, "export const version: string;");
+
+        // 2. Write code in VFS that imports this library
+        vfs.write("main.ts", 'import { version } from "dummy-lib"; console.log(version);');
+
+        const result = compiler.compileFiles();
+
+        // This triggers the 'External Resolution' branch in resolveModuleNames
+        expect(result.success).toBe(true);
+
+        // Cleanup
+        fs.rmSync(pkgRoot, { recursive: true, force: true });
+    });
+
+    it("should use the source file cache on subsequent compiles", () => {
+        vfs.write("cache-test.ts", "const a = 1;");
+
+        // First compile: Populates cache
+        const result1 = compiler.compileFiles();
+        expect(result1.success).toBe(true);
+
+        // Second compile with unchanged file: Should use cache
+        const result2 = compiler.compileFiles();
+        expect(result2.success).toBe(true);
+
+        // Update file content: Should invalidate cache
+        vfs.write("cache-test.ts", "const b = 2;");
+        const result3 = compiler.compileFiles();
+        expect(result3.success).toBe(true);
+
+        // Verify the output reflects the update
+        const compiledContent = vfs.read("out/cache-test.js")?.content;
+        expect(compiledContent).toContain("b = 2");
+    });
+
+    it("should resolve built-in TypeScript libraries (lib.d.ts)", () => {
+        // Using Map or Promise triggers lookups for lib.es2015.d.ts etc.
+        vfs.write("libs.ts", "const x: Map<string, string> = new Map();");
+
+        const result = compiler.compileFiles();
+        expect(result.success).toBe(true);
     });
 });
