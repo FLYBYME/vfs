@@ -7,6 +7,8 @@ import { VirtualFileSystem } from './VirtualFileSystem';
 import { VirtualFile } from './VirtualFile';
 
 export interface DockerSandboxOptions {
+    vfs: VirtualFileSystem;
+    entryPoint: VirtualFile;
     timeoutMs?: number;
     env?: Record<string, string>;
     memoryLimit?: number;
@@ -19,19 +21,17 @@ export class DockerSandbox {
     private static IMAGE = 'agent-sandbox-runner:latest';
 
     public async execute(
-        vfs: VirtualFileSystem,
-        entryPoint: VirtualFile,
-        options?: DockerSandboxOptions
+        options: DockerSandboxOptions
     ): Promise<ContainerLogs> {
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sandbox-exec-'));
 
-        for (const file of vfs.getAllFiles()) {
+        for (const file of options.vfs.getAllFiles()) {
             await fs.mkdir(path.join(tempDir, path.dirname(file.path)), { recursive: true });
             await fs.writeFile(path.join(tempDir, file.path), file.content);
         }
 
         try {
-            return await this.runContainer(tempDir, options?.cmd || ['node', `/sandbox/src/${entryPoint.path}`], options);
+            return await this.runContainer(tempDir, options.cmd || ['node', `/sandbox/src/${options.entryPoint.path}`], options);
         } finally {
             await fs.rm(tempDir, { recursive: true, force: true });
         }
